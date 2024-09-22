@@ -3,5 +3,5 @@ export function fade(t) {
 }
 
 export function lerp(a, b, t) {
-  return (1 - t) * a + t * b;
+  return a + t * (b - a);
 }

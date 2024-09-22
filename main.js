@@ -1,4 +1,4 @@
-import { Grad, PerlinNoise } from "./perlin.js";
+import PerlinNoise from "./perlin.js";
 
 const canvas = document.getElementById("perlinCanvas");
 const ctx = canvas.getContext("2d");
@@ -7,77 +7,117 @@ const canvasSize = window.innerHeight;
 canvas.height = canvasSize;
 canvas.width = canvasSize;
 
-ctx.strokeRect(0, 0, canvasSize, canvasSize);
+let noise = new PerlinNoise();
 
-var grad3 = [
-  new Grad(1, 1, 0),
-  new Grad(-1, 1, 0),
-  new Grad(1, -1, 0),
-  new Grad(-1, -1, 0),
-  new Grad(1, 0, 1),
-  new Grad(-1, 0, 1),
-  new Grad(1, 0, -1),
-  new Grad(-1, 0, -1),
-  new Grad(0, 1, 1),
-  new Grad(0, -1, 1),
-  new Grad(0, 1, -1),
-  new Grad(0, -1, -1),
-];
-
-// var p = [
-//   151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140,
-//   36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234,
-//   75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33, 88, 237,
-//   149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48,
-//   27, 166, 77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105,
-//   92, 41, 55, 46, 245, 40, 244, 102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73,
-//   209, 76, 132, 187, 208, 89, 18, 169, 200, 196, 135, 130, 116, 188, 159, 86,
-//   164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123, 5, 202, 38,
-//   147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189,
-//   28, 42, 223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101,
-//   155, 167, 43, 172, 9, 129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232,
-//   178, 185, 112, 104, 218, 246, 97, 228, 251, 34, 242, 193, 238, 210, 144, 12,
-//   191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107, 49, 192, 214, 31,
-//   181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
-//   138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215,
-//   61, 156, 180,
-// ];
-
-let p = new Array(256);
-
-for (let i = 0; i < p.length; i++) {
-  p[i] = Math.floor(Math.random() * 255);
-}
-
-console.log(p);
-
-var perm = new Array(512);
-var gradP = new Array(512);
-let seed = Math.random() * 256;
-
-let perlin = new PerlinNoise(seed, p, perm, gradP, grad3);
+let noiseArr = [];
 
 //Variables
-perlin.generateSeed();
+
+let octaves = 6; // Number of layers
+let persistence = 0.5; // Amplitude decrease factor
+let total = 0;
+let frequency = 1;
+let zoomFactor = 300;
+let amplitude = 1;
 
 var image = ctx.createImageData(canvas.width, canvas.height);
 var data = image.data;
 
-for (var x = 0; x < canvas.width; x++) {
-  //if (x % 100 == 0) {
-  //  noise.seed(Math.random());
-  //}
-  for (var y = 0; y < canvas.height; y++) {
-    var value = Math.abs(perlin.perlin2d(x / 100, y / 100));
-    value *= 256;
+function Draw() {
+  noiseArr = [];
+  for (var x = 0; x < canvas.width; x++) {
+    for (var y = 0; y < canvas.height; y++) {
+      let noiseValue = 0;
+      total = 0;
+      amplitude = 1; // Reset amplitude
+      frequency = 1; // Reset frequency
 
-    var cell = (x + y * canvas.width) * 4;
-    data[cell] = data[cell + 1] = data[cell + 2] = value;
-    data[cell] += Math.max(0, (25 - value) * 8);
-    data[cell + 3] = 255; // alpha.
+      for (let o = 0; o < octaves; o++) {
+        noiseValue +=
+          noise.perlin(
+            (x / zoomFactor) * frequency,
+            (y / zoomFactor) * frequency
+          ) * amplitude;
+
+        total += amplitude;
+        amplitude *= persistence; // Decrease amplitude
+        frequency *= 2; // Increase frequency
+      }
+
+      // Normalize noise value
+      const normalNoise = noiseValue / total;
+
+      const color = Math.floor((normalNoise + 1) * 128); // Scale value to 0-255
+      const colorMapping = noise.colorMapping(color);
+
+      noiseArr.push(color);
+
+      const index = (x + y * canvas.width) * 4;
+
+      data[index] = colorMapping.r; // Red
+      data[index + 1] = colorMapping.g; // Green
+      data[index + 2] = colorMapping.b; // Blue
+      data[index + 3] = 255; // Alpha
+    }
   }
+  ctx.putImageData(image, 0, 0);
+
+  let result = findMinMax(noiseArr);
+
+  console.log("Min :", result.min);
+  console.log("Max :", result.max);
 }
 
-ctx.fillColor = "black";
-ctx.fillRect(0, 0, 100, 100);
-ctx.putImageData(image, 0, 0);
+// Draw();
+Draw();
+
+function findMinMax(arr) {
+  return arr.reduce(
+    (acc, val) => {
+      if (val > acc.max) acc.max = val;
+      if (val < acc.min) acc.min = val;
+      return acc;
+    },
+    { max: -Infinity, min: Infinity }
+  );
+}
+
+document.addEventListener("keydown", handleKeyPress);
+
+function handleKeyPress(event) {
+  if (event.key === "=") {
+    zoomFactor += 10;
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+    Draw();
+    console.log(`Zoom Factor: ${zoomFactor}`);
+  }
+
+  if (event.key === "-") {
+    zoomFactor -= 10;
+    zoomFactor = Math.max(zoomFactor, 90); // Ensure zoomFactor does not go below 30
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+    Draw();
+    console.log(`Zoom Factor: ${zoomFactor}`);
+  }
+
+  if (event.key === "o") {
+    octaves += 1;
+    if (octaves > 6) {
+      octaves = 1;
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+    Draw();
+    console.log(`Octaves: ${octaves}`);
+  }
+
+  if (event.key === "p") {
+    // Press 'p' to increase persistence
+    persistence += 0.1;
+    if (persistence > 1) {
+      persistence = 0.5; // Limit max value
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    Draw();
+    console.log(`Persistence: ${persistence}`);
+  }
+}
