@@ -67,18 +67,25 @@ export default class PerlinNoise {
       max: 180,
     };
 
+    const mountains = {
+      min: 0,
+      max: 110,
+    };
+
     let colorValue;
 
     if (value < 130) {
       colorValue = lerp(water.min, water.max, value / 128);
       return { r: 0, g: 0, b: colorValue };
     }
+
     if (value < 145) {
       colorValue = lerp(land.min, land.max, value / 128);
       return { r: 0, g: colorValue, b: 0 };
     }
     if (value < 160) {
-      return { r: 0, g: 120, b: 0 };
+      colorValue = lerp(mountains.min, mountains.max, value / 128);
+      return { r: 0, g: colorValue, b: 0 };
     } else {
       return { r: 0, g: 98, b: 0 };
     }
