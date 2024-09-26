@@ -1,4 +1,5 @@
 import PerlinNoise from "./perlin.js";
+import { Character } from "./character.js";
 
 const canvas = document.getElementById("perlinCanvas");
 const ctx = canvas.getContext("2d");
@@ -9,8 +10,6 @@ canvas.width = canvasSize;
 
 let noise = new PerlinNoise();
 
-let noiseArr = [];
-
 //Variables
 
 let octaves = 6; // Number of layers
@@ -20,11 +19,20 @@ let frequency = 1;
 let zoomFactor = 300;
 let amplitude = 1;
 
+let panOffsetX = 0; // Pan offset for X direction
+let panOffsetY = 0; // Pan offset for Y direction
+
 var image = ctx.createImageData(canvas.width, canvas.height);
 var data = image.data;
 
-function Draw() {
-  noiseArr = [];
+//Character variables
+const characterX = 30;
+const characterY = 30;
+let characterRadius = 30;
+
+let character = new Character(characterX, characterY);
+
+function drawNoise() {
   for (var x = 0; x < canvas.width; x++) {
     for (var y = 0; y < canvas.height; y++) {
       let noiseValue = 0;
@@ -35,8 +43,8 @@ function Draw() {
       for (let o = 0; o < octaves; o++) {
         noiseValue +=
           noise.perlin(
-            (x / zoomFactor) * frequency,
-            (y / zoomFactor) * frequency
+            ((x + panOffsetX) / zoomFactor) * frequency,
+            ((y + panOffsetY) / zoomFactor) * frequency
           ) * amplitude;
 
         total += amplitude;
@@ -50,8 +58,6 @@ function Draw() {
       const color = Math.floor((normalNoise + 1) * 128); // Scale value to 0-255
       const colorMapping = noise.colorMapping(color);
 
-      noiseArr.push(color);
-
       const index = (x + y * canvas.width) * 4;
 
       data[index] = colorMapping.r; // Red
@@ -61,26 +67,20 @@ function Draw() {
     }
   }
   ctx.putImageData(image, 0, 0);
-
-  let result = findMinMax(noiseArr);
-
-  console.log("Min :", result.min);
-  console.log("Max :", result.max);
 }
 
-// Draw();
-Draw();
-
-function findMinMax(arr) {
-  return arr.reduce(
-    (acc, val) => {
-      if (val > acc.max) acc.max = val;
-      if (val < acc.min) acc.min = val;
-      return acc;
-    },
-    { max: -Infinity, min: Infinity }
-  );
+function Draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+  drawNoise();
+  character.update();
+  character.Draw(ctx, zoomFactor / characterRadius);
+  if (character.x != character.targetX) {
+    drawX(character.targetX, character.targetY, 5);
+  }
+  requestAnimationFrame(Draw);
 }
+
+requestAnimationFrame(Draw);
 
 document.addEventListener("keydown", handleKeyPress);
 
@@ -120,4 +120,68 @@ function handleKeyPress(event) {
     Draw();
     console.log(`Persistence: ${persistence}`);
   }
+
+  const panSpeed = 10; // Adjust the speed of panning
+
+  //Map panning controls
+  if (event.key === "ArrowLeft") {
+    panOffsetX -= panSpeed;
+    if (panOffsetX < 0) {
+      panOffsetX = 0;
+      console.log("Can't go out of bound");
+    } else {
+      console.log("Going Left");
+      Draw();
+    }
+  }
+  if (event.key === "ArrowRight") {
+    panOffsetX += panSpeed;
+    if (panOffsetX < 0) {
+      panOffsetX = 0;
+      console.log("Can't go out of bound");
+    } else {
+      console.log("Going Right");
+      Draw();
+    }
+  }
+  if (event.key === "ArrowUp") {
+    panOffsetY -= panSpeed;
+    if (panOffsetY < 0) {
+      panOffsetY = 0;
+      console.log("Can't go out of bound");
+    } else {
+      console.log("Going Up");
+      Draw();
+    }
+  }
+  if (event.key === "ArrowDown") {
+    panOffsetY += panSpeed;
+    if (panOffsetY < 0) {
+      panOffsetY = 0;
+      console.log("Can't go out of bound");
+    } else {
+      console.log("Going Down");
+      Draw();
+    }
+  }
 }
+
+function drawX(x, y, size) {
+  ctx.beginPath();
+  ctx.moveTo(x - size, y - size);
+  ctx.lineTo(x + size, y + size);
+  ctx.moveTo(x + size, y - size);
+  ctx.lineTo(x - size, y + size);
+  ctx.strokeStyle = "yellow";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// Set target position on click
+canvas.addEventListener("click", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  character.setTarget(x, y);
+  Draw();
+});
