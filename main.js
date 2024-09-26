@@ -16,7 +16,7 @@ let octaves = 6; // Number of layers
 let persistence = 0.5; // Amplitude decrease factor
 let total = 0;
 let frequency = 1;
-let zoomFactor = 300;
+let zoomFactor = 100;
 let amplitude = 1;
 
 let panOffsetX = 0; // Pan offset for X direction
@@ -26,9 +26,9 @@ var image = ctx.createImageData(canvas.width, canvas.height);
 var data = image.data;
 
 //Character variables
-const characterX = 30;
-const characterY = 30;
-let characterRadius = 30;
+const characterX = 300;
+const characterY = 300;
+let characterRadius = 7;
 
 let character = new Character(characterX, characterY);
 
@@ -66,16 +66,17 @@ function drawNoise() {
       data[index + 3] = 255; // Alpha
     }
   }
-  ctx.putImageData(image, 0, 0);
 }
+//Call it to compute the map
+drawNoise();
 
 function Draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-  drawNoise();
-  character.update();
-  character.Draw(ctx, zoomFactor / characterRadius);
+  ctx.putImageData(image, 0, 0); // Put the map back
+  character.update(panOffsetX, panOffsetY); //Move the character
+  character.Draw(ctx, characterRadius, character.x, character.y); //Draw the character
   if (character.x != character.targetX) {
-    drawX(character.targetX, character.targetY, 5);
+    drawX(character.targetX, character.targetY, 5); // If the character got to his destination don't draw the X
   }
   requestAnimationFrame(Draw);
 }
@@ -88,14 +89,16 @@ function handleKeyPress(event) {
   if (event.key === "=") {
     zoomFactor += 10;
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+    drawNoise();
     Draw();
     console.log(`Zoom Factor: ${zoomFactor}`);
   }
 
   if (event.key === "-") {
     zoomFactor -= 10;
-    zoomFactor = Math.max(zoomFactor, 90); // Ensure zoomFactor does not go below 30
+    zoomFactor = Math.max(zoomFactor, 90); // Ensure zoomFactor does not go below 90
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+    drawNoise();
     Draw();
     console.log(`Zoom Factor: ${zoomFactor}`);
   }
@@ -106,6 +109,7 @@ function handleKeyPress(event) {
       octaves = 1;
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+    drawNoise();
     Draw();
     console.log(`Octaves: ${octaves}`);
   }
@@ -117,6 +121,8 @@ function handleKeyPress(event) {
       persistence = 0.5; // Limit max value
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawNoise();
+
     Draw();
     console.log(`Persistence: ${persistence}`);
   }
@@ -131,6 +137,7 @@ function handleKeyPress(event) {
       console.log("Can't go out of bound");
     } else {
       console.log("Going Left");
+      drawNoise();
       Draw();
     }
   }
@@ -141,6 +148,7 @@ function handleKeyPress(event) {
       console.log("Can't go out of bound");
     } else {
       console.log("Going Right");
+      drawNoise();
       Draw();
     }
   }
@@ -151,6 +159,7 @@ function handleKeyPress(event) {
       console.log("Can't go out of bound");
     } else {
       console.log("Going Up");
+      drawNoise();
       Draw();
     }
   }
@@ -161,6 +170,7 @@ function handleKeyPress(event) {
       console.log("Can't go out of bound");
     } else {
       console.log("Going Down");
+      drawNoise();
       Draw();
     }
   }

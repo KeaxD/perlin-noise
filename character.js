@@ -4,12 +4,12 @@ export class Character {
     this.y = y;
     this.targetX = x;
     this.targetY = y;
-    this.speed = 2; // Adjust the speed of the character
+    this.speed = 1; // Adjust the speed of the character
   }
 
-  Draw(ctx, radius) {
+  Draw(ctx, radius, x, y) {
     ctx.beginPath();
-    ctx.arc(this.x, this.y, radius, 0, 2 * Math.PI);
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
     ctx.strokeStyle = "black";
     ctx.stroke();
     ctx.fillStyle = "red";
